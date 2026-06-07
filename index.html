@@ -61,29 +61,31 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getDatabase, ref, push, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyAsX-SAMPLE_KEY_FOR_QUEUE_SYSTEM_BUILT",
-            authDomain: "audio-queue-platform.firebaseapp.com",
-            projectId: "audio-queue-platform",
-            storageBucket: "audio-queue-platform.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:abcdef123456"
+            apiKey: "AIzaSyCAEQyqtcW26k7yc-vKQMpfQgmWXDPP0yw",
+            authDomain: "audio-queue-53efb.firebaseapp.com",
+            databaseURL: "https://audio-queue-53efb-default-rtdb.firebaseio.com",
+            projectId: "audio-queue-53efb",
+            storageBucket: "audio-queue-53efb.firebasestorage.app",
+            messagingSenderId: "242269512815",
+            appId: "1:242269512815:web:df4055e5bd0a154d87599a",
+            measurementId: "G-GQ3CRV1YHM"
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getDatabase(app);
         const rtcConfig = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 
         let clientStream = null;
         let clientPeer = null;
         let clientCallId = null;
-        let clientUnsub = null;
+        let clientRef = null;
 
         document.getElementById('startCallBtn').addEventListener('click', async () => {
             const name = document.getElementById('username').value.trim();
-            if(!name) { alert('الرجاء إدخال الاسم أولاً'); return; }
+            if(!name) { alert('الرجاء إدخل الاسم أولاً'); return; }
 
             try {
                 document.getElementById('joinForm').style.display = 'none';
@@ -95,21 +97,25 @@
                 clientStream.getTracks().forEach(track => clientPeer.addTrack(track, clientStream));
                 clientPeer.ontrack = (e) => { document.getElementById('clientAudio').srcObject = e.streams[0]; };
 
-                const docRef = await addDoc(collection(db, "callsQueue"), {
+                const queueRef = ref(db, "callsQueue");
+                const newCallRef = push(queueRef);
+                clientCallId = newCallRef.key;
+                clientRef = newCallRef;
+
+                await set(clientRef, {
                     clientName: name,
                     status: "waiting",
-                    createdAt: serverTimestamp()
+                    createdAt: Date.now()
                 });
-                clientCallId = docRef.id;
 
                 clientPeer.onicecandidate = async (e) => {
                     if (e.candidate && clientCallId) {
-                        await updateDoc(doc(db, "callsQueue", clientCallId), { clientCandidate: e.candidate.toJSON() });
+                        await update(ref(db, `callsQueue/${clientCallId}`), { clientCandidate: e.candidate.toJSON() });
                     }
                 };
 
-                clientUnsub = onSnapshot(doc(db, "callsQueue", clientCallId), async (snapshot) => {
-                    const data = snapshot.data();
+                onValue(clientRef, async (snapshot) => {
+                    const data = snapshot.val();
                     if (!data) return;
 
                     if(data.status === "active" && data.offer && !clientPeer.currentRemoteDescription) {
@@ -120,7 +126,7 @@
                         await clientPeer.setRemoteDescription(new RTCSessionDescription(data.offer));
                         const answer = await clientPeer.createAnswer();
                         await clientPeer.setLocalDescription(answer);
-                        await updateDoc(doc(db, "callsQueue", clientCallId), { answer: { type: answer.type, sdp: answer.sdp } });
+                        await update(ref(db, `callsQueue/${clientCallId}`), { answer: { type: answer.type, sdp: answer.sdp } });
                     }
                     
                     if (data.opCandidate && clientPeer.currentRemoteDescription) {
@@ -131,19 +137,18 @@
                 });
 
             } catch (err) {
-                alert("يرجى تفعيل صلاحية الميكروفون.");
+                alert("يرجى تفعيل صلاحية الميكروفون للاتصال.");
                 document.getElementById('joinForm').style.display = 'block';
                 document.getElementById('queueStatus').style.display = 'none';
             }
         });
 
         async function clientTerminate() {
-            if(clientCallId) { await updateDoc(doc(db, "callsQueue", clientCallId), { status: "ended" }); }
+            if(clientCallId) { await update(ref(db, `callsQueue/${clientCallId}`), { status: "ended" }); }
             resetClientUI();
         }
 
         function resetClientUI() {
-            if (clientUnsub) { clientUnsub(); clientUnsub = null; }
             if (clientPeer) { clientPeer.close(); clientPeer = null; }
             if (clientStream) { clientStream.getTracks().forEach(t => t.stop()); clientStream = null; }
             clientCallId = null;
