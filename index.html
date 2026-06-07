@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مركز الاتصال الصوتي المباشر</title>
+    <title>لوحة تحكم المشغّل - نظام الاتصال الصوتي</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -17,143 +17,190 @@
             --text-muted: #94a3b8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .container { width: 100%; max-width: 450px; background-color: var(--card-dark); border-radius: 16px; padding: 30px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); border: 1px solid #334155; text-align: center; }
-        h1 { font-size: 24px; margin-bottom: 10px; font-weight: 700; }
-        p.subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; text-align: right; }
-        label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-muted); }
-        input { width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155; background-color: var(--bg-dark); color: var(--text-main); font-size: 16px; outline: none; }
-        input:focus { border-color: var(--primary); }
-        .btn { width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .btn-primary { background-color: var(--primary); color: white; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-danger { background-color: var(--danger); color: white; margin-top: 15px; }
-        .status-box { display: none; margin-top: 20px; padding: 20px; border-radius: 12px; background-color: rgba(37, 99, 235, 0.1); border: 1px dashed var(--primary); }
-        .pulse-loader { width: 64px; height: 64px; background-color: var(--primary); border-radius: 50%; margin: 20px auto; animation: pulse 1.5s infinite ease-in-out; }
-        @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.5; } }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; padding: 30px; }
+        .dashboard { max-width: 800px; margin: 0 auto; }
+        h1 { font-size: 26px; margin-bottom: 20px; font-weight: 700; border-bottom: 2px solid #334155; padding-bottom: 10px; }
+        .main-grid { display: grid; grid-template-columns: 1xl; gap: 20px; }
+        .card { background-color: var(--card-dark); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); border: 1px solid #334155; }
+        h2 { font-size: 18px; margin-bottom: 15px; color: var(--text-muted); }
+        .queue-list { list-style: none; }
+        .queue-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background-color: var(--bg-dark); border-radius: 8px; margin-bottom: 10px; border: 1px solid #1e293b; }
+        .client-info { text-align: right; }
+        .client-name { font-weight: 600; font-size: 16px; }
+        .client-time { font-size: 12px; color: var(--text-muted); }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-success:hover { background-color: #059669; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .active-call-box { display: none; text-align: center; padding: 30px 10px; background-color: rgba(16, 185, 129, 0.1); border: 2px dashed var(--success); border-radius: 8px; }
+        .active-name { font-size: 22px; font-weight: 700; color: var(--success); margin-bottom: 15px; }
+        .empty-msg { color: var(--text-muted); text-align: center; font-style: italic; padding: 20px 0; }
         audio { display: none; }
     </style>
 </head>
 <body>
 
-    <audio id="clientAudio" autoplay controls></audio>
+    <audio id="operatorAudio" autoplay controls></audio>
 
-    <div class="container">
-        <h1>اتصال صوتي مباشر</h1>
-        <p class="subtitle">تواصل مع الدعم الفني فوراً عبر المتصفح</p>
+    <div class="dashboard">
+        <h1>لوحة تحكم مشغّل النظام الفني</h1>
         
-        <div id="joinForm">
-            <div class="form-group">
-                <label for="username">الاسم الكريم</label>
-                <input type="text" id="username" placeholder="أدخل اسمك هنا...">
+        <div class="main-grid">
+            <div class="card active-call-box" id="activeCallArea">
+                <h2>المكالمة الحالية النشطة</h2>
+                <div class="active-name" id="currentClientName">جاري التحدث مع: عمار</div>
+                <button class="btn btn-danger" id="endCallOpBtn">إنهاء المكالمة الحالية</button>
             </div>
-            <button class="btn btn-primary" id="startCallBtn">ابدأ الاتصال الآن</button>
-        </div>
 
-        <div class="status-box" id="queueStatus">
-            <div class="pulse-loader"></div>
-            <h3 id="queueText">أنت في قائمة الانتظار...</h3>
-            <p style="color: var(--text-muted); margin-top: 10px;" id="queueSubtext">يرجى الانتظار، سيتم تحويلك تلقائياً فور تفرغ المشغّل.</p>
-            <button class="btn btn-danger" id="endCallClientBtn" style="display: none;">إنهاء المكالمة</button>
+            <div class="card">
+                <h2>قائمة المتصلين في الانتظار</h2>
+                <ul class="queue-list" id="queueContainer">
+                    <li class="empty-msg" id="emptyMessage">لا يوجد عملاء في قائمة الانتظار حالياً...</li>
+                </ul>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // مفاتيح الربط البرمجية المأخوذة من مشروعك لربط المشغل بالعميل مباشرة
         const firebaseConfig = {
-            apiKey: "AIzaSyAsX-SAMPLE_KEY_FOR_QUEUE_SYSTEM_BUILT",
-            authDomain: "audio-queue-platform.firebaseapp.com",
-            projectId: "audio-queue-platform",
-            storageBucket: "audio-queue-platform.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:abcdef123456"
+            apiKey: "AIzaSyCAEQyqtcW26k7yc-vKQMpfQgmWXDPP0yw",
+            authDomain: "audio-queue-53efb.firebaseapp.com",
+            databaseURL: "https://audio-queue-53efb-default-rtdb.firebaseio.com",
+            projectId: "audio-queue-53efb",
+            storageBucket: "audio-queue-53efb.firebasestorage.app",
+            messagingSenderId: "242269512815",
+            appId: "1:242269512815:web:df4055e5bd0a154d87599a",
+            measurementId: "G-GQ3CRV1YHM"
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getDatabase(app);
         const rtcConfig = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 
-        let clientStream = null;
-        let clientPeer = null;
-        let clientCallId = null;
-        let clientUnsub = null;
+        let opStream = null;
+        let opPeer = null;
+        let currentActiveCallId = null;
 
-        document.getElementById('startCallBtn').addEventListener('click', async () => {
-            const name = document.getElementById('username').value.trim();
-            if(!name) { alert('الرجاء إدخال الاسم أولاً'); return; }
+        // الاستماع الفوري لقائمة الانتظار بالسيرفر وتحديث الواجهة
+        const queueRef = ref(db, "callsQueue");
+        onValue(queueRef, (snapshot) => {
+            const data = snapshot.val();
+            const container = document.getElementById('queueContainer');
+            container.innerHTML = "";
 
-            try {
-                document.getElementById('joinForm').style.display = 'none';
-                document.getElementById('queueStatus').style.display = 'block';
+            if (!data) {
+                container.innerHTML = '<li class="empty-msg" id="emptyMessage">لا يوجد عملاء في قائمة الانتظار حالياً...</li>';
+                return;
+            }
 
-                clientStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                clientPeer = new RTCPeerConnection(rtcConfig);
+            let hasWaiting = false;
+
+            Object.keys(data).forEach(id => {
+                const call = data[id];
                 
-                clientStream.getTracks().forEach(track => clientPeer.addTrack(track, clientStream));
-                clientPeer.ontrack = (e) => { document.getElementById('clientAudio').srcObject = e.streams[0]; };
-
-                const docRef = await addDoc(collection(db, "callsQueue"), {
-                    clientName: name,
-                    status: "waiting",
-                    createdAt: serverTimestamp()
-                });
-                clientCallId = docRef.id;
-
-                clientPeer.onicecandidate = async (e) => {
-                    if (e.candidate && clientCallId) {
-                        await updateDoc(doc(db, "callsQueue", clientCallId), { clientCandidate: e.candidate.toJSON() });
+                // إذا كان العميل ينتظر، نعرضه في القائمة ليرى المشغل زر "رد"
+                if (call.status === "waiting") {
+                    hasWaiting = true;
+                    const li = document.createElement('li');
+                    li.className = "queue-item";
+                    li.innerHTML = `
+                        <div class="client-info">
+                            <div class="client-name">${call.clientName}</div>
+                            <div class="client-time">ينتظر الاتصال...</div>
+                        </div>
+                        <button class="btn btn-success" onclick="acceptCall('${id}', '${call.clientName}')">الرد على المكالمة</button>
+                    `;
+                    container.appendChild(li);
+                } 
+                // إذا أغلقت المكالمة من طرف آخر نقوم بتنظيف الواجهة لدى المشغل
+                else if (id === currentActiveCallId && call.status === "ended") {
+                    resetOperatorUI();
+                }
+                // استقبال الـ Candidate من العميل وربطه بـ WebRTC للمشغل
+                else if (id === currentActiveCallId && call.clientCandidate && opPeer) {
+                    if (opPeer.currentRemoteDescription) {
+                        try { opPeer.addIceCandidate(new RTCIceCandidate(call.clientCandidate)); } catch(e){}
                     }
-                };
+                }
+            });
 
-                clientUnsub = onSnapshot(doc(db, "callsQueue", clientCallId), async (snapshot) => {
-                    const data = snapshot.data();
-                    if (!data) return;
-
-                    if(data.status === "active" && data.offer && !clientPeer.currentRemoteDescription) {
-                        document.getElementById('queueText').innerText = "أنت في مكالمة مباشرة الآن";
-                        document.getElementById('queueSubtext').innerText = "جاري التحدث مع الموظف الفني...";
-                        document.getElementById('endCallClientBtn').style.display = 'block';
-
-                        await clientPeer.setRemoteDescription(new RTCSessionDescription(data.offer));
-                        const answer = await clientPeer.createAnswer();
-                        await clientPeer.setLocalDescription(answer);
-                        await updateDoc(doc(db, "callsQueue", clientCallId), { answer: { type: answer.type, sdp: answer.sdp } });
-                    }
-                    
-                    if (data.opCandidate && clientPeer.currentRemoteDescription) {
-                        try { await clientPeer.addIceCandidate(new RTCIceCandidate(data.opCandidate)); } catch(err) {}
-                    }
-
-                    if(data.status === "ended") { resetClientUI(); }
-                });
-
-            } catch (err) {
-                alert("يرجى تفعيل صلاحية الميكروفون.");
-                document.getElementById('joinForm').style.display = 'block';
-                document.getElementById('queueStatus').style.display = 'none';
+            if (!hasWaiting) {
+                container.innerHTML = '<li class="empty-msg" id="emptyMessage">لا يوجد عملاء في قائمة الانتظار حالياً...</li>';
             }
         });
 
-        async function clientTerminate() {
-            if(clientCallId) { await updateDoc(doc(db, "callsQueue", clientCallId), { status: "ended" }); }
-            resetClientUI();
+        // وظيفة الرد وقبول المكالمة وتوصيل الـ WebRTC
+        window.acceptCall = async (callId, clientName) => {
+            if (currentActiveCallId) { alert("أنت في مكالمة نشطة بالفعل!"); return; }
+            
+            try {
+                currentActiveCallId = callId;
+                document.getElementById('currentClientName').innerText = `جاري التحدث مع: ${clientName}`;
+                document.getElementById('activeCallArea').style.display = 'block';
+
+                opStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                opPeer = new RTCPeerConnection(rtcConfig);
+
+                opStream.getTracks().forEach(track => opPeer.addTrack(track, opStream));
+                opPeer.ontrack = (e) => { document.getElementById('operatorAudio').srcObject = e.streams[0]; };
+
+                opPeer.onicecandidate = async (e) => {
+                    if (e.candidate && currentActiveCallId) {
+                        await update(ref(db, `callsQueue/${currentActiveCallId}`), { opCandidate: e.candidate.toJSON() });
+                    }
+                };
+
+                // إنشاء الـ Offer وإرساله لقاعدة البيانات
+                const offer = await opPeer.createOffer();
+                await opPeer.setLocalDescription(offer);
+                
+                await update(ref(db, `callsQueue/${callId}`), {
+                    status: "active",
+                    offer: { type: offer.type, sdp: offer.sdp }
+                });
+
+                // الاستماع لإجابة العميل (Answer) لتكتمل المكالمة
+                const answerRef = ref(db, `callsQueue/${callId}/answer`);
+                onValue(answerRef, async (snapshot) => {
+                    const answer = snapshot.val();
+                    if (answer && opPeer && !opPeer.currentRemoteDescription) {
+                        await opPeer.setRemoteDescription(new RTCSessionDescription(answer));
+                    }
+                });
+
+            } catch (err) {
+                alert("يرجى تفعيل صلاحية الميكروفون للمشغل.");
+                resetOperatorUI();
+            }
+        };
+
+        // إنهاء المكالمة
+        async function operatorTerminate() {
+            if (currentActiveCallId) {
+                await update(ref(db, `callsQueue/${currentActiveCallId}`), { status: "ended" });
+                // تنظيف السجل بعد الانتهاء للحفاظ على قاعدة البيانات خفيفة ونظيفة
+                setTimeout(async () => {
+                    if(currentActiveCallId) await remove(ref(db, `callsQueue/${currentActiveCallId}`));
+                    resetOperatorUI();
+                }, 1000);
+            } else {
+                resetOperatorUI();
+            }
         }
 
-        function resetClientUI() {
-            if (clientUnsub) { clientUnsub(); clientUnsub = null; }
-            if (clientPeer) { clientPeer.close(); clientPeer = null; }
-            if (clientStream) { clientStream.getTracks().forEach(t => t.stop()); clientStream = null; }
-            clientCallId = null;
-            document.getElementById('joinForm').style.display = 'block';
-            document.getElementById('queueStatus').style.display = 'none';
-            document.getElementById('endCallClientBtn').style.display = 'none';
-            document.getElementById('queueText').innerText = "أنت في قائمة الانتظار...";
+        function resetOperatorUI() {
+            if (opPeer) { opPeer.close(); opPeer = null; }
+            if (opStream) { opStream.getTracks().forEach(t => t.stop()); opStream = null; }
+            currentActiveCallId = null;
+            document.getElementById('activeCallArea').style.display = 'none';
         }
 
-        document.getElementById('endCallClientBtn').addEventListener('click', clientTerminate);
+        document.getElementById('endCallOpBtn').addEventListener('click', operatorTerminate);
     </script>
 </body>
 </html>
